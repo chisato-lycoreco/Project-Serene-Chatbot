@@ -13,3 +13,7 @@ node_modules/
 .DS_Store
 Thumbs.db
 out/
+
+# 你自己的那份工作区约定（见 README「把 DSH 变成她的共同作者」）
+AGENTS.local.md
+CLAUDE.local.md
