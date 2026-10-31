@@ -6,6 +6,8 @@
 
 这是「白纸版本」：**没有预置的共同过去**。她不记得任何你们没说过的事，第一段记忆只能从第一句话里长出来。
 
+![界面：左边聊天，右边是关系与「她相信的」](docs/screenshot.png)
+
 ```bash
 cp .env.example .env   # 填上 DEEPSEEK_API_KEY
 npm start              # http://127.0.0.1:4310
