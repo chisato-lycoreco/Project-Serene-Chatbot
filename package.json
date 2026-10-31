@@ -1,0 +1,25 @@
+{
+  "name": "project-serene-chatbot",
+  "version": "0.1.0",
+  "private": false,
+  "description": "一个会记得你的本地聊天角色：人格是文件，记忆会衰减，关系从对话里长出来。",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node server.mjs",
+    "demo": "node server.mjs --demo",
+    "test": "node --test",
+    "check": "node scripts/check.mjs"
+  },
+  "keywords": [
+    "chatbot",
+    "companion",
+    "memory",
+    "persona",
+    "deepseek",
+    "local-first"
+  ],
+  "license": "MIT"
+}

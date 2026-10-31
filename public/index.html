@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>知遥 · 会记得你的聊天角色</title>
+    <meta name="description" content="一个本地运行的聊天角色：人格是文件，记忆会衰减，关系从对话里长出来。" />
+    <link rel="icon" href="/favicon.svg" />
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <div class="app">
+      <main class="chat">
+        <header class="chat-head">
+          <div class="who">
+            <span class="pulse" id="pulse"></span>
+            <div>
+              <h1 id="persona-name">知遥</h1>
+              <p id="status-line">正在醒来…</p>
+            </div>
+          </div>
+          <div class="head-actions">
+            <button class="ghost" id="btn-reflect" title="让她把最近这段对话重新看一遍">整理记忆</button>
+            <button class="ghost" id="btn-trace" title="看这一轮她为什么这么说">透视</button>
+            <button class="ghost only-mobile" id="btn-side" aria-expanded="false" aria-controls="side">记忆</button>
+          </div>
+        </header>
+
+        <div class="messages" id="messages" role="log" aria-live="polite"></div>
+
+        <div class="composer">
+          <div class="composer-box">
+            <textarea
+              id="input"
+              rows="1"
+              maxlength="2000"
+              placeholder="说点什么。她记得住的。"
+              autocomplete="off"
+            ></textarea>
+            <button id="send" aria-label="发送">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M4 12l15-7-4 7 4 7-15-7z" />
+              </svg>
+            </button>
+          </div>
+          <div class="composer-foot">
+            <span id="hint">Enter 发送 · Shift + Enter 换行</span>
+            <span id="key-hint"></span>
+          </div>
+        </div>
+      </main>
+
+      <aside class="side" id="side" aria-label="记忆与档案">
+        <div class="side-head">
+          <div class="mark" id="mark">知</div>
+          <div class="side-title">
+            <strong>记忆与档案</strong>
+            <span id="side-sub">她不是每次都记得</span>
+          </div>
+          <button class="icon only-mobile" id="close-side" aria-label="收起">✕</button>
+        </div>
+
+        <nav class="tabs" id="tabs">
+          <button data-tab="memory" class="active">记忆</button>
+          <button data-tab="growth">档案</button>
+          <button data-tab="bond">关系</button>
+          <button data-tab="timeline">时间</button>
+          <button data-tab="settings">设置</button>
+        </nav>
+
+        <div class="panels">
+          <section class="panel active" data-panel="memory">
+            <div class="panel-head">
+              <div class="search">
+                <input id="memory-search" type="search" placeholder="找她记得的事、原话…" />
+              </div>
+              <select id="memory-kind" aria-label="类型">
+                <option value="">全部</option>
+                <option value="fact">事实</option>
+                <option value="preference">喜好</option>
+                <option value="moment">时刻</option>
+                <option value="promise">答应过</option>
+                <option value="insight">想明白的</option>
+                <option value="self">她自己</option>
+              </select>
+            </div>
+            <div class="memory-stats" id="memory-stats"></div>
+            <div class="memory-list" id="memory-list"></div>
+            <form class="add-memory" id="add-memory">
+              <input id="new-memory-text" maxlength="80" placeholder="教她记住一件小事…" />
+              <select id="new-memory-kind" aria-label="类型">
+                <option value="fact">事实</option>
+                <option value="preference">喜好</option>
+                <option value="moment">时刻</option>
+                <option value="promise">答应过</option>
+                <option value="insight">想明白的</option>
+              </select>
+              <button type="submit">记住</button>
+            </form>
+          </section>
+
+          <section class="panel" data-panel="growth">
+            <div class="panel-head">
+              <p class="lead">这些不是设定，是从对话里一点点长出来的。权重是她被印证过几次。</p>
+            </div>
+            <div id="growth-list" class="growth-list"></div>
+            <div class="sub-head">
+              <span>更早的样子</span>
+              <button class="link" id="btn-growth-reset">清空档案</button>
+            </div>
+            <div id="snapshot-list" class="snapshot-list"></div>
+          </section>
+
+          <section class="panel" data-panel="bond">
+            <div id="bond-view"></div>
+          </section>
+
+          <section class="panel" data-panel="timeline">
+            <div id="timeline-view"></div>
+          </section>
+
+          <section class="panel" data-panel="settings">
+            <form id="settings-form" class="settings">
+              <label>
+                <span>模型</span>
+                <input name="model" />
+              </label>
+              <label>
+                <span>温度 <em id="temp-value"></em></span>
+                <input name="temperature" type="range" min="0" max="2" step="0.05" />
+              </label>
+              <label>
+                <span>一次回复最多多少字</span>
+                <input name="replyChars" type="number" min="40" max="400" step="10" />
+              </label>
+              <label>
+                <span>每轮最多想起几条</span>
+                <input name="recallLimit" type="number" min="0" max="8" />
+              </label>
+              <label class="row">
+                <span>聊完自动写记忆</span>
+                <input name="remember" type="checkbox" />
+              </label>
+              <label>
+                <span>背景给多少</span>
+                <select name="depth">
+                  <option value="short">少（只有人格和此刻）</option>
+                  <option value="normal">正常（加记忆和档案）</option>
+                  <option value="deep">多（档案多给一条）</option>
+                </select>
+              </label>
+              <button type="submit" class="primary">保存</button>
+            </form>
+
+            <div class="data-actions">
+              <a class="ghost wide" href="/api/export">导出全部数据（JSON）</a>
+              <button class="ghost wide" id="btn-reset-chat">清空对话（记忆保留）</button>
+              <button class="ghost wide danger" id="btn-reset-all">全部重置</button>
+            </div>
+
+            <p class="key-state" id="key-state"></p>
+            <p class="fine">
+              数据只在这台机器上：<code>data/</code> 里的 JSON 和 JSONL。没有账号、没有云同步。
+              换人格改 <code>personas/</code>；记忆和档案都在文件里，可以直接打开看。
+            </p>
+          </section>
+        </div>
+      </aside>
+    </div>
+
+    <div class="scrim only-mobile" id="scrim"></div>
+
+    <div class="modal" id="modal" hidden>
+      <div class="modal-card">
+        <header>
+          <strong id="modal-title">透视</strong>
+          <button class="icon" id="modal-close" aria-label="关闭">✕</button>
+        </header>
+        <div class="modal-body" id="modal-body"></div>
+      </div>
+    </div>
+
+    <div class="toast" id="toast" hidden></div>
+
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>

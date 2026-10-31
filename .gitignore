@@ -1,0 +1,15 @@
+# 本地数据：聊天、记忆、情绪、档案。都不进 git。
+data/*
+!data/.gitkeep
+
+# 密钥
+.env
+.env.local
+
+# 运行时
+*.log
+logs/
+node_modules/
+.DS_Store
+Thumbs.db
+out/
