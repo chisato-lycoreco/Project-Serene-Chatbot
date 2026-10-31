@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>她的大脑 · Project Serene</title>
+    <meta name="description" content="把她的记忆、档案和看法摊开成一张可以走进去的图。" />
+    <link rel="icon" href="/favicon.svg" />
+    <link rel="stylesheet" href="/pages.css" />
+    <link rel="stylesheet" href="/brain.css" />
+  </head>
+  <body class="page brain-page">
+    <header class="topbar">
+      <a class="brand" href="/">
+        <span class="brand-mark">知</span>
+        <span class="brand-text">
+          <b>Project Serene</b>
+          <small>白纸版知遥 · 脑内图</small>
+        </span>
+      </a>
+      <nav class="tabs" aria-label="页面">
+        <a href="/">对话</a>
+        <a href="/mechanisms">机制</a>
+        <a href="/brain" class="on">大脑</a>
+        <a href="/monitor">监测</a>
+      </nav>
+      <div class="topbar-right">
+        <span class="status-dot" id="conn">读取中</span>
+      </div>
+    </header>
+
+    <main class="brain-wrap">
+      <canvas id="brain-canvas" aria-label="她的记忆与档案图"></canvas>
+      <div class="brain-vignette" aria-hidden="true"></div>
+
+      <section class="brain-hud">
+        <p class="eyebrow">Mind Map</p>
+        <h1>她脑子里<br />现在长这样</h1>
+        <p class="brain-sub" id="brain-sub">正在把记忆摊开…</p>
+
+        <div class="brain-modes" role="tablist" aria-label="图层">
+          <button type="button" data-mode="growth" class="on">档案</button>
+          <button type="button" data-mode="memory">记忆</button>
+          <button type="button" data-mode="belief">看法</button>
+        </div>
+        <p class="brain-mode-desc" id="mode-desc">从对话里长出来的六个格子。</p>
+      </section>
+
+      <aside class="brain-stats" id="brain-stats"></aside>
+
+      <div class="brain-hint">拖动平移 · 滚轮缩放 · 点一个节点看细节</div>
+
+      <div class="brain-zoom">
+        <button type="button" id="zoom-in" aria-label="放大">＋</button>
+        <button type="button" id="zoom-out" aria-label="缩小">－</button>
+        <button type="button" id="zoom-reset" aria-label="复位">◎</button>
+      </div>
+
+      <section class="brain-detail" id="brain-detail" hidden>
+        <header>
+          <span class="detail-kind" id="detail-kind">档案</span>
+          <button type="button" id="detail-close" aria-label="关闭">✕</button>
+        </header>
+        <h2 id="detail-title">—</h2>
+        <p id="detail-text">—</p>
+        <div class="detail-meta" id="detail-meta"></div>
+        <div class="detail-evidence" id="detail-evidence"></div>
+      </section>
+
+      <div class="brain-tip" id="brain-tip" hidden></div>
+
+      <div class="brain-empty" id="brain-empty" hidden>
+        <b>这里还是空的。</b>
+        <span id="brain-empty-text">和她聊几句，或者去监测面板装一段演示数据。</span>
+      </div>
+    </main>
+
+    <script type="module" src="/brain.js"></script>
+  </body>
+</html>

@@ -75,6 +75,9 @@ export class TraceStore {
         userText: row.userText,
         chars: row.reply?.chars ?? 0,
         latencyMs: row.reply?.latencyMs ?? 0,
+        promptChars: row.prompt?.chars ?? 0,
+        usage: row.reply?.usage ?? null,
+        model: row.reply?.model ?? "",
         wrote: row.wrote ?? null,
         styleOk: row.style?.ok !== false,
       }));

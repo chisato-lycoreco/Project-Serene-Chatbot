@@ -143,7 +143,8 @@ async function boot() {
     return;
   }
   renderAll();
-  if (state.data.opening && (state.data.hasKey || state.data.demo)) {
+  // demo 模式第一次打开不自动开口：先让人选「装入演示数据」还是「让她先开口」。
+  if (state.data.opening && state.data.hasKey && !state.data.demo) {
     await requestOpening();
   }
 }
@@ -218,6 +219,8 @@ function bind() {
     if (event.target === $("#modal")) closeModal();
   });
 
+  $("#btn-seed")?.addEventListener("click", seedDemo);
+
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape") {
       if (!$("#modal").hidden) closeModal();
@@ -277,6 +280,10 @@ function renderHeader() {
   $("#pulse").classList.toggle("off", !hasKey && !demo);
 
   $("#key-hint").textContent = demo ? "demo 模式" : hasKey ? "" : "还没有 API key";
+  const seedButton = $("#btn-seed");
+  if (seedButton) {
+    seedButton.hidden = !demo || state.data.memory.size > 0 || state.data.chat.messages.length > 0;
+  }
   $("#key-hint").style.cursor = "pointer";
   $("#key-hint").onclick = () => {
     switchTab("settings");
@@ -328,18 +335,52 @@ function renderMessages() {
 function emptyState() {
   const { hasKey, demo } = state.data;
   const canOpen = hasKey || demo;
+  const actions = [];
+  if (canOpen) {
+    actions.push(h("button", { class: "ghost", style: { marginTop: "18px" }, text: "让她先开口", onclick: requestOpening }));
+  } else {
+    actions.push(
+      h("div", {
+        style: { marginTop: "16px", fontSize: "12px" },
+        text: "还没有配 DEEPSEEK_API_KEY。填进 .env，或者 npm run demo 先看看。",
+      }),
+    );
+  }
+  if (demo) {
+    actions.push(
+      h("button", {
+        class: "ghost",
+        style: { marginTop: "10px" },
+        text: "装入一段演示数据",
+        onclick: seedDemo,
+      }),
+      h("div", {
+        style: { marginTop: "10px", fontSize: "11.5px", opacity: "0.7" },
+        text: "一段没聊完的对话、八条记忆、六个格子的档案，还有一张亮着的监测面板。",
+      }),
+    );
+  }
   return h(
     "div",
     { class: "empty" },
     h("strong", { text: "她还什么都不记得。" }),
     h("div", { text: "你们还没说过话。第一句话会长出第一段记忆——之后她会忘、会记牢、会慢慢长成另一个样子。" }),
-    canOpen
-      ? h("button", { class: "ghost", style: { marginTop: "18px" }, text: "让她先开口", onclick: requestOpening })
-      : h("div", {
-          style: { marginTop: "16px", fontSize: "12px" },
-          text: "还没有配 DEEPSEEK_API_KEY。填进 .env，或者 npm run demo 先看看。",
-        }),
+    ...actions,
   );
+}
+
+async function seedDemo() {
+  setBusy(true);
+  try {
+    const result = await api("/api/demo/seed", { method: "POST" });
+    if (result?.state) state.data = result.state;
+    renderAll();
+    toast(result?.seeded ? "装好了。去「监测」看看她此刻的样子。" : result?.reason ?? "已经有数据了。");
+  } catch (error) {
+    toast(error.message);
+  } finally {
+    setBusy(false);
+  }
 }
 
 function showTyping() {

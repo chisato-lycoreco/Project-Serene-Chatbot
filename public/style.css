@@ -164,6 +164,19 @@ code {
   background: var(--accent-soft);
 }
 
+a.ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+
+@media (max-width: 980px) {
+  .page-link {
+    display: none !important;
+  }
+}
+
 .ghost.wide {
   display: block;
   width: 100%;

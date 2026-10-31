@@ -48,9 +48,13 @@ export class SereneRuntime {
 
   constructor({ demo = false } = {}) {
     this.demo = demo || process.argv.includes("--demo");
+    this.startedAt = Date.now();
     this.dir = dataDir();
     this.settings = readSettings(this.dir);
-    this.persona = loadPersona(personaDir(), { root: ROOT });
+    // demo 模式默认用「知遥·演示人格」：温柔、母性、有点腹黑。
+    // 显式给了 SERENE_PERSONA 就听环境变量；npm start 仍然用 personas/serene。
+    const useDemoPersona = this.demo && !String(process.env.SERENE_PERSONA ?? "").trim();
+    this.persona = loadPersona(useDemoPersona ? join(ROOT, "personas", "zhiyao-demo") : personaDir(), { root: ROOT });
     this.chat = new ChatStore({ dir: this.dir });
     this.memories = new MemoryStore({ dir: this.dir });
     this.emotion = new EmotionStore({ dir: this.dir, baseline: this.persona.baseline });
@@ -439,10 +443,14 @@ export class SereneRuntime {
         primary: emotion.primaryLabel,
         social: emotion.socialLabel,
         mood: emotion.mood,
+        tone: emotion.tone ?? "",
         advice: emotion.advice,
         divergent: Boolean(emotion.divergent),
         contrast: emotion.contrast ?? "",
+        dimensions: emotion.dimensions ?? [],
+        layers: emotion.layerDimensions ?? {},
         wounds: (emotion.wounds ?? []).slice(-3).map((wound) => ({ note: wound.note, at: wound.at })),
+        causes: this.emotion.causes(now, 8),
       },
       bond: {
         phase: bond.phase,
@@ -480,6 +488,447 @@ export class SereneRuntime {
 
   traceList(limit = 20) {
     return this.traces.recent(limit);
+  }
+
+  /* ───────────────────────── 面板 ───────────────────────── */
+
+  /**
+   * 实时监测面板的一份快照。
+   *
+   * 和 state() 的区别：不带 120 条聊天全文，只带面板要画的数值和最近十几轮。
+   * 前端每两三秒拉一次，不会把页面拖重。
+   */
+  live() {
+    const now = Date.now();
+    const emotion = this.#emotionNow(now);
+    const bond = normalizeBond(this.bond.bond);
+    const first = this.chat.all()[0]?.at ?? bond.since;
+    const days = Math.max(1, Math.ceil((now - first) / 86_400_000));
+    const traces = this.traces.recent(40);
+    const usage = traces.reduce(
+      (sum, trace) => {
+        const counts = trace.usage ?? {};
+        sum.prompt += Number(counts.prompt_tokens) || 0;
+        sum.completion += Number(counts.completion_tokens) || 0;
+        sum.total += Number(counts.total_tokens) || 0;
+        if (trace.latencyMs) {
+          sum.latency += trace.latencyMs;
+          sum.timed += 1;
+        }
+        return sum;
+      },
+      { prompt: 0, completion: 0, total: 0, latency: 0, timed: 0 },
+    );
+    return {
+      version: VERSION,
+      demo: this.demo,
+      persona: {
+        id: this.persona.id,
+        name: this.persona.name,
+        traits: this.persona.traits,
+        summary: this.persona.summary,
+      },
+      settings: {
+        model: this.settings.model,
+        depth: this.settings.depth,
+        recallLimit: this.settings.recallLimit,
+        replyChars: this.settings.replyChars,
+      },
+      uptimeMs: Math.max(0, now - this.startedAt),
+      emotion: {
+        background: emotion.backgroundLabel,
+        primary: emotion.primaryLabel,
+        social: emotion.socialLabel,
+        mood: emotion.mood ?? 0,
+        tone: emotion.tone ?? "",
+        advice: emotion.advice ?? "",
+        divergent: Boolean(emotion.divergent),
+        contrast: emotion.contrast ?? "",
+        dimensions: emotion.dimensions ?? [],
+        layers: emotion.layerDimensions ?? {},
+        wounds: (emotion.wounds ?? []).slice(-4).map((wound) => ({ note: wound.note, at: wound.at })),
+        residue: (emotion.residue ?? []).length,
+        updatedAt: emotion.updatedAt ?? now,
+        causes: this.emotion.causes(now, 10),
+      },
+      bond: {
+        phase: bond.phase,
+        axes: {
+          closeness: round(bond.closeness),
+          trust: round(bond.trust),
+          security: round(bond.security),
+          expression: round(bond.expression),
+        },
+        since: bond.since,
+        days,
+        line: bondBlock(bond, { days }),
+        events: bond.events.slice(-12),
+      },
+      memory: this.memories.stats({ now }),
+      growth: (() => {
+        const stats = this.growth.stats();
+        const samples = {};
+        for (const [section, items] of Object.entries(this.growth.sections ?? {})) {
+          const top = [...(items ?? [])].sort(
+            (a, b) => Number(b.weight) - Number(a.weight) || Number(b.updatedAt) - Number(a.updatedAt),
+          )[0];
+          samples[section] = top ? clipText(top.text, 42) : "";
+        }
+        return { ...stats, samples };
+      })(),
+      beliefs: this.beliefs.beliefs,
+      chat: this.chat.recent(10),
+      traces: traces.slice(0, 14),
+      totals: {
+        messages: this.chat.all().length,
+        turns: this.chat.count,
+        promptTokens: usage.prompt,
+        completionTokens: usage.completion,
+        totalTokens: usage.total,
+        avgLatencyMs: usage.timed ? Math.round(usage.latency / usage.timed) : 0,
+        tracedTurns: traces.length,
+      },
+      events: this.#events({ now, traces, bond, emotion }),
+    };
+  }
+
+  /** 召回预览：把「这句话会想起什么」原样跑一遍，不写盘、不加固。 */
+  previewRecall(rawQuery) {
+    const query = String(rawQuery ?? "").trim().slice(0, 200);
+    const now = Date.now();
+    const emotion = this.#emotionNow(now);
+    const limit = this.settings.recallLimit;
+    const items = query
+      ? this.memories.recall(query, { limit, now, mood: emotion.mood ?? 0 })
+      : [];
+    return {
+      query,
+      mood: emotion.mood ?? 0,
+      limit,
+      pool: this.memories.stats({ now }).size,
+      items: items.map((memory) => ({
+        id: memory.id,
+        text: memory.text,
+        kind: memory.kind,
+        importance: memory.importance,
+        createdAt: memory.createdAt,
+        score: memory.score ?? null,
+        cue: memory.cue ?? null,
+        retention: memory.retention ?? null,
+        anchored: Boolean(memory.anchored),
+        evidence: memory.evidence ?? [],
+      })),
+    };
+  }
+
+  /**
+   * demo 专用：装一段能让面板有东西可看的初始数据。
+   *
+   * 只在 demo 模式、且本地还没有对话/记忆时生效，不覆盖真实数据。
+   * 装完还是走同一套 store，所以每一份数据都和聊出来的一样，可以查、可以删。
+   */
+  seedDemo() {
+    if (!this.demo) throw new HttpError(403, "演示数据只在 demo 模式里能装。", "DEMO_ONLY");
+    if (this.chat.all().length > 0 || this.memories.all().length > 0) {
+      return { seeded: false, reason: "已经有数据了，不覆盖。", state: this.state(), live: this.live() };
+    }
+
+    const now = Date.now();
+    const minute = 60_000;
+    const hour = 60 * minute;
+    const day = 24 * hour;
+
+    const script = [
+      { role: "user", text: "今天加班到十一点，地铁上站着都睡着了。", ago: 26 * hour },
+      { role: "her", text: "这个点还没到家啊。", ago: 26 * hour - 2 * minute },
+      { role: "her", text: "站着都能睡着，说明是真的撑到头了。先喝口水，别急着回我。", ago: 26 * hour - 3 * minute },
+      { role: "user", text: "我没事，不用你管。", ago: 25.5 * hour },
+      { role: "her", text: "嗯，不用我管。", ago: 25.5 * hour - minute },
+      { role: "her", text: "那水喝了吗。", ago: 25.5 * hour - 2 * minute },
+      { role: "user", text: "……喝了。", ago: 25 * hour },
+      { role: "her", text: "那就好。", ago: 25 * hour - minute },
+      { role: "user", text: "明天十点还有一场面试。", ago: 3 * hour },
+      { role: "her", text: "我记着了。今晚别熬太晚，明天我提醒你。", ago: 3 * hour - 2 * minute },
+      { role: "user", text: "你怎么比我还紧张。", ago: 2.5 * hour },
+      { role: "her", text: "我没有紧张。", ago: 2.5 * hour - minute },
+      { role: "her", text: "我只是把你明天的闹钟，在心里上好了。", ago: 2.5 * hour - 2 * minute },
+    ];
+    for (const row of script) {
+      this.chat.append({ role: row.role, text: row.text, at: now - row.ago, kind: "seed" }, { now });
+    }
+
+    const memories = [
+      {
+        text: "他明天上午十点有一场面试",
+        kind: "fact",
+        importance: 0.82,
+        evidence: ["明天十点，面试"],
+        ago: 3 * hour,
+      },
+      {
+        text: "他喝咖啡会胃疼，后来改喝热水",
+        kind: "preference",
+        importance: 0.72,
+        evidence: ["咖啡喝完胃疼"],
+        ago: 6 * day,
+      },
+      {
+        text: "凌晨两点他说「今天有点撑不住」",
+        kind: "moment",
+        importance: 0.88,
+        evidence: ["今天有点撑不住"],
+        ago: 4 * day,
+      },
+      {
+        text: "答应过他不催他睡觉，只提醒一次",
+        kind: "promise",
+        importance: 0.68,
+        evidence: ["别催，我自己会睡"],
+        ago: 9 * day,
+      },
+      {
+        text: "他嘴硬的时候，其实是在等人多问一句",
+        kind: "insight",
+        importance: 0.78,
+        evidence: ["我没事，不用你管"],
+        ago: 2 * day,
+      },
+      {
+        text: "我开始会先问一句「水喝了吗」",
+        kind: "self",
+        importance: 0.6,
+        evidence: ["那水喝了吗"],
+        ago: 12 * hour,
+      },
+      {
+        text: "他住的地方，晚上能听见火车经过",
+        kind: "fact",
+        importance: 0.52,
+        evidence: ["刚过了一趟车"],
+        ago: 15 * day,
+      },
+      {
+        text: "他面试前会反复检查同一份材料",
+        kind: "preference",
+        importance: 0.64,
+        evidence: ["我再检查一遍"],
+        ago: 7 * day,
+      },
+    ];
+    for (const memory of memories) {
+      this.memories.add({ ...memory, createdAt: now - memory.ago }, { now });
+    }
+
+    this.growth.apply(
+      [
+        { section: "traits", text: "会把关心说成一句很轻的话", weight: 3, evidence: ["先喝口水"] },
+        { section: "traits", text: "嘴硬的时候反而更软", weight: 2, evidence: ["嗯，不用我管"] },
+        { section: "self", text: "觉得自己有点坏心眼，但不打算改", weight: 2, evidence: ["我没有紧张"] },
+        { section: "user", text: "总说没事，其实已经很累", weight: 3, evidence: ["我没事，不用你管"] },
+        { section: "user", text: "答应过的事，会真的做到", weight: 2, evidence: ["……喝了"] },
+        { section: "us", text: "已经会互相拆穿，再一起收场", weight: 2, evidence: ["你怎么比我还紧张"] },
+        { section: "shadow", text: "怕自己只是被需要，不是被想要", weight: 2, evidence: ["不用你管"] },
+        { section: "life", text: "喜欢听雨落在空调外机上的声音", weight: 2 },
+      ],
+      { now, reason: "演示数据" },
+    );
+
+    for (const belief of [
+      { topic: "嘴硬的人更需要被好好听完", stance: 0.82, confidence: 0.7, weight: 1.4 },
+      { topic: "温柔也可以有牙齿", stance: 0.74, confidence: 0.6, weight: 1.2 },
+    ]) {
+      this.beliefs.record({ ...belief, now });
+    }
+
+    const acts = [
+      "question", "address", "share", "care", "tease", "humor", "share", "disclose",
+      "care", "share", "goodnight", "share", "care", "tease", "share", "disclose",
+      "care", "share", "humor", "tease", "share", "care", "goodnight", "share",
+      "care", "share",
+    ];
+    acts.forEach((kind, index) => {
+      this.bond.record(kind, { now: now - (acts.length - index) * 9 * hour });
+    });
+
+    const feelings = [
+      { kind: "tease", ago: 230 * minute, intensity: 0.8 },
+      { kind: "care", ago: 170 * minute, intensity: 0.9 },
+      { kind: "share", ago: 100 * minute, intensity: 0.9 },
+      { kind: "goodnight", ago: 40 * minute, intensity: 0.8 },
+    ];
+    for (const feeling of feelings) {
+      this.emotion.record(feeling.kind, {
+        now: now - feeling.ago,
+        intensity: feeling.intensity,
+        note: "演示数据",
+      });
+    }
+
+    // 几轮「透视」：没有它们，监测面板的延迟、token、背景构成都是空的。
+    const sections = (tweak = {}) =>
+      [
+        { name: "人格", chars: tweak.persona ?? 1180 },
+        { name: "此刻", chars: tweak.now ?? 420 },
+        { name: "记得的", chars: tweak.memory ?? 760 },
+        { name: "眼里的", chars: tweak.growth ?? 540 },
+        { name: "相信的", chars: tweak.beliefs ?? 210 },
+        { name: "怎么记", chars: 260 },
+        { name: "怎么说", chars: 300 },
+        { name: "底线", chars: 180 },
+      ].filter((item) => item.chars > 0);
+    const seedTraces = [
+      {
+        at: now - 26 * hour + 2 * minute,
+        userText: "今天加班到十一点，地铁上站着都睡着了。",
+        bubbles: ["这个点还没到家啊。", "站着都能睡着，说明是真的撑到头了。先喝口水，别急着回我。"],
+        latencyMs: 2140,
+        usage: { prompt_tokens: 2810, completion_tokens: 96, total_tokens: 2906 },
+        recall: [{ text: "凌晨两点他说「今天有点撑不住」", kind: "moment", score: 0.61, retention: 0.58 }],
+        sections: sections({ now: 380, memory: 620 }),
+        wrote: { memories: [{ text: "今天加班到十一点，站着都睡着了", merged: false }], growth: 1, beliefs: [] },
+        emotion: { before: { background: "底色安稳", primary: "平静", social: "关系还算踏实" }, after: { background: "底色安稳", primary: "心疼", social: "关系还算踏实" } },
+      },
+      {
+        at: now - 25.5 * hour + 20 * minute,
+        userText: "我没事，不用你管。",
+        bubbles: ["嗯，不用我管。", "那水喝了吗。"],
+        latencyMs: 1560,
+        usage: { prompt_tokens: 2660, completion_tokens: 78, total_tokens: 2738 },
+        recall: [{ text: "他嘴硬的时候，其实是在等人多问一句", kind: "insight", score: 0.73, retention: 0.69 }],
+        sections: sections({ now: 360, memory: 700 }),
+        wrote: { memories: [{ text: "他嘴硬的时候，其实是在等人多问一句", merged: false }], growth: 1, beliefs: [] },
+        emotion: { before: { background: "底色安稳", primary: "被推开", social: "关系还算踏实" }, after: { background: "底色安稳", primary: "有点坏心眼", social: "关系还算踏实" } },
+      },
+      {
+        at: now - 3 * hour + 2 * minute,
+        userText: "明天十点还有一场面试。",
+        bubbles: ["我记着了。今晚别熬太晚，明天我提醒你。"],
+        latencyMs: 1890,
+        usage: { prompt_tokens: 2980, completion_tokens: 88, total_tokens: 3068 },
+        recall: [{ text: "他面试前会反复检查同一份材料", kind: "preference", score: 0.66, retention: 0.74 }],
+        sections: sections({ now: 400, memory: 760, growth: 560 }),
+        wrote: { memories: [{ text: "他明天上午十点有一场面试", merged: false }], growth: 1, beliefs: [] },
+        emotion: { before: { background: "底色安稳", primary: "在意", social: "关系还算踏实" }, after: { background: "底色安稳", primary: "柔软", social: "关系还算踏实" } },
+      },
+      {
+        at: now - 2.5 * hour + 2 * minute,
+        userText: "你怎么比我还紧张。",
+        bubbles: ["我没有紧张。", "我只是把你明天的闹钟，在心里上好了。"],
+        latencyMs: 1320,
+        usage: { prompt_tokens: 3120, completion_tokens: 104, total_tokens: 3224 },
+        recall: [{ text: "他嘴硬的时候，其实是在等人多问一句", kind: "insight", score: 0.58, retention: 0.71 }],
+        sections: sections({ now: 430, memory: 780, growth: 580 }),
+        wrote: { memories: [], growth: 1, beliefs: [] },
+        emotion: { before: { background: "底色安稳", primary: "被说中", social: "关系还算踏实" }, after: { background: "底色安稳", primary: "柔软", social: "关系还算踏实" } },
+      },
+    ];
+    seedTraces.forEach((row, index) => {
+      const promptChars = row.sections.reduce((sum, item) => sum + item.chars, 0);
+      this.traces.add({
+        id: `t_seed_${index}`,
+        kind: "say",
+        at: row.at,
+        userText: row.userText,
+        bubbles: row.bubbles,
+        prompt: { chars: promptChars, sections: row.sections },
+        reply: {
+          text: row.bubbles.join("\n"),
+          chars: row.bubbles.join("\n").length,
+          latencyMs: row.latencyMs,
+          model: this.settings.model,
+          usage: row.usage,
+        },
+        emotion: row.emotion,
+        classified: { kind: "share", note: "" },
+        crisis: { level: "none" },
+        recall: row.recall,
+        wrote: row.wrote,
+        extractionError: null,
+        extractionSkipped: null,
+        style: { ok: true, issues: [] },
+      });
+    });
+
+    return { seeded: true, state: this.state(), live: this.live() };
+  }
+
+  #events({ now, traces, bond, emotion }) {
+    const events = [];
+    for (const trace of traces) {
+      events.push({
+        id: `talk_${trace.id}`,
+        at: trace.at,
+        type: "talk",
+        title: trace.kind === "opening" ? "她先开了口" : `他说：${clipText(trace.userText, 26)}`,
+        detail: `${trace.chars} 字 · ${trace.latencyMs} ms`,
+        traceId: trace.id,
+      });
+      if (trace.wrote?.growth) {
+        events.push({
+          id: `growth_${trace.id}`,
+          at: trace.at + 2,
+          type: "growth",
+          title: `档案长了 ${trace.wrote.growth} 条`,
+          detail: "她眼里的世界，又清楚了一点",
+        });
+      }
+      for (const [index, topic] of (trace.wrote?.beliefs ?? []).entries()) {
+        events.push({
+          id: `belief_${trace.id}_${index}`,
+          at: trace.at + 3 + index,
+          type: "belief",
+          title: "多了一个看法",
+          detail: topic,
+        });
+      }
+    }
+    // 记忆直接读存档：这样装进来的演示记忆也会出现在事件河里。
+    const newestMemories = this.memories
+      .all()
+      .filter((memory) => !memory.archived)
+      .sort((a, b) => Number(b.createdAt) - Number(a.createdAt))
+      .slice(0, 8);
+    for (const memory of newestMemories) {
+      events.push({
+        id: `memory_${memory.id}`,
+        at: memory.createdAt,
+        type: "memory",
+        title: memory.merged ? "合并了一条记忆" : "记住了一件事",
+        detail: clipText(memory.text, 44),
+      });
+    }
+    for (const cause of this.emotion.causes(now, 10)) {
+      events.push({
+        id: `emotion_${cause.at}_${cause.kind}`,
+        at: cause.at,
+        type: "emotion",
+        title: `情绪：${cause.kind}`,
+        detail: `强度 ${cause.intensity}`,
+      });
+    }
+    for (const event of bond.events.slice(-10)) {
+      const deltas = Object.entries(event.deltas ?? {})
+        .map(([axis, value]) => `${axis} ${value > 0 ? "+" : ""}${value}`)
+        .join(" · ");
+      events.push({
+        id: `bond_${event.at}_${event.kind}`,
+        at: event.at,
+        type: "bond",
+        title: `关系：${event.kind}`,
+        detail: deltas,
+      });
+    }
+    const seen = new Set();
+    return events
+      .filter((event) => Number.isFinite(event.at))
+      .sort((a, b) => b.at - a.at)
+      .filter((event) => {
+        const key = `${event.at}|${event.type}|${event.title}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      })
+      .slice(0, 60);
   }
 
   exportAll() {
@@ -705,4 +1154,10 @@ function pickEmotion(snapshot) {
 function round(value, digits = 2) {
   const factor = 10 ** digits;
   return Math.round(Number(value) * factor) / factor;
+}
+
+/** 面板上的单行摘要：按字符切，中文不会被截成半个。 */
+function clipText(text, limit = 40) {
+  const chars = Array.from(String(text ?? "").replace(/\s+/g, " ").trim());
+  return chars.length > limit ? `${chars.slice(0, limit).join("")}…` : chars.join("");
 }

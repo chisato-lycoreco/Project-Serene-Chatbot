@@ -229,6 +229,18 @@ chatOnce(text) {
 - `prefers-reduced-motion` 下关闭动画；
 - 抽屉在窄屏用 `aria-expanded` / `hidden` 控制。
 
+### 5.4 三张只读页面
+
+`/mechanisms`、`/brain`、`/monitor` 各自一份 HTML + JS + CSS，共用 `public/pages.css` 的色板与版式，不引入聊天页的 `app.js`。
+
+- **数据来源**：`/api/live` 是监测页的完整快照；`/api/state` 给脑内图提供档案、记忆、看法与关系；机制页同时用 `/api/live`、`/api/traces` 和 `/api/recall-preview`。
+- **刷新方式**：监测页 2.5 秒轮询，机制页 5 秒；脑内图只在打开时拉一次，之后靠切视图重建，不轮询。
+- **只读边界**：除了 demo 的 `POST /api/demo/seed` 和机制页的 `POST /api/recall-preview`（只算分、不写盘），三张页面没有写接口。
+- **图形**：情绪雷达、记忆环、延迟折线、脑内图都是 Canvas 2D，按 `devicePixelRatio` 缩放；文字仍走 `textContent`，没有 `innerHTML`。
+- **窄屏**：脑内图在 `< 620px` 时只标六个大类，细节点点开看详情；监测页从 12 列塌成单列，靠 `pages.css` 里同一组断点。
+
+新增可视化时，优先复用 `pages.css` 的 token（颜色、间距、卡片）和 `/api/live` 的字段，不要为一张图新增写接口。
+
 ---
 
 ## 6. 想加东西时动哪里

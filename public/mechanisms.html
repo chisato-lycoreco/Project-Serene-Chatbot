@@ -1,0 +1,350 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>核心机制 · Project Serene</title>
+    <meta
+      name="description"
+      content="一句话进来之后发生了什么：人格、记忆、情绪、关系、档案，以及它们怎么一起决定她这一句怎么说。"
+    />
+    <link rel="icon" href="/favicon.svg" />
+    <link rel="stylesheet" href="/pages.css" />
+  </head>
+  <body class="page">
+    <header class="topbar">
+      <a class="brand" href="/">
+        <span class="brand-mark">知</span>
+        <span class="brand-text">
+          <b>Project Serene</b>
+          <small>白纸版知遥 · 核心机制</small>
+        </span>
+      </a>
+      <nav class="tabs" aria-label="页面">
+        <a href="/">对话</a>
+        <a href="/mechanisms" class="on">机制</a>
+        <a href="/brain">大脑</a>
+        <a href="/monitor">监测</a>
+      </nav>
+      <div class="topbar-right">
+        <span class="status-dot">本地运行</span>
+        <span class="badge gold" id="version-badge">v—</span>
+      </div>
+    </header>
+
+    <main>
+      <!-- Hero -->
+      <section class="hero shell">
+        <div class="hero-copy">
+          <p class="eyebrow">Core Mechanisms</p>
+          <h1>她不是「记住了」，<br />是那些事<em>还浮得上来</em>。</h1>
+          <p class="lede">
+            没有向量库，没有微调，也没有一个「用户画像」字段。她只有几份 Markdown、一列会变淡的记忆、
+            三层会退潮的情绪，和一段从对话里慢慢长出来的关系。这一页把这些东西拆开给你看。
+          </p>
+          <div class="hero-actions">
+            <a class="btn primary" href="/">去和她说句话</a>
+            <a class="btn" href="/monitor">看实时监测</a>
+            <a class="btn" href="/brain">看她的脑内图</a>
+          </div>
+          <div class="hero-stats">
+            <div class="hero-stat">
+              <b id="stat-memories">—</b>
+              <span>还记得的事</span>
+            </div>
+            <div class="hero-stat">
+              <b id="stat-growth">—</b>
+              <span>长出来的档案</span>
+            </div>
+            <div class="hero-stat">
+              <b id="stat-days">—</b>
+              <span>认识的天数</span>
+            </div>
+            <div class="hero-stat">
+              <b id="stat-turns">—</b>
+              <span>她回过的轮次</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="orbit-card" aria-hidden="true">
+          <svg class="orbit" viewBox="0 0 520 520">
+            <defs>
+              <radialGradient id="core-glow" cx="50%" cy="42%" r="60%">
+                <stop offset="0%" stop-color="#d8a86a" stop-opacity="0.34" />
+                <stop offset="100%" stop-color="#d8a86a" stop-opacity="0" />
+              </radialGradient>
+              <linearGradient id="sweep-line" x1="0" y1="1" x2="0" y2="0">
+                <stop offset="0%" stop-color="#d8a86a" stop-opacity="0" />
+                <stop offset="100%" stop-color="#d8a86a" stop-opacity="0.5" />
+              </linearGradient>
+            </defs>
+            <circle cx="260" cy="260" r="238" fill="url(#core-glow)" />
+            <circle class="ring" cx="260" cy="260" r="245" />
+            <circle class="ring" cx="260" cy="260" r="202" />
+            <circle class="ring strong" cx="260" cy="260" r="150" />
+            <circle class="ring" cx="260" cy="260" r="92" />
+
+            <g class="sweep">
+              <line x1="260" y1="260" x2="260" y2="16" stroke="url(#sweep-line)" stroke-width="1" />
+            </g>
+
+            <!-- 七个节点：人格、记忆、情绪、关系、档案、看法、此刻 -->
+            <g>
+              <circle class="orbit-node" cx="260" cy="52" r="5" />
+              <text x="260" y="34" text-anchor="middle">人格</text>
+            </g>
+            <g>
+              <circle class="orbit-node" cx="458" cy="170" r="5" />
+              <text x="470" y="162" text-anchor="start">记忆</text>
+            </g>
+            <g>
+              <circle class="orbit-node" cx="430" cy="400" r="5" />
+              <text x="444" y="408" text-anchor="start">档案</text>
+            </g>
+            <g>
+              <circle class="orbit-node" cx="260" cy="468" r="5" />
+              <text x="260" y="492" text-anchor="middle">情绪</text>
+            </g>
+            <g>
+              <circle class="orbit-node" cx="62" cy="400" r="5" />
+              <text x="48" y="408" text-anchor="end">关系</text>
+            </g>
+            <g>
+              <circle class="orbit-node" cx="62" cy="170" r="5" />
+              <text x="48" y="162" text-anchor="end">看法</text>
+            </g>
+            <g>
+              <circle class="orbit-dot" cx="260" cy="110" r="3" />
+              <circle class="orbit-dot" cx="404" cy="260" r="3" />
+              <circle class="orbit-dot" cx="260" cy="410" r="3" />
+              <circle class="orbit-dot" cx="116" cy="260" r="3" />
+            </g>
+
+            <circle cx="260" cy="260" r="66" fill="#12110f" stroke="rgba(216,168,106,0.34)" />
+            <text class="core-label" x="260" y="257" text-anchor="middle">知遥</text>
+            <text class="core-sub" x="260" y="278" text-anchor="middle">ZHIYAO</text>
+          </svg>
+          <p class="orbit-caption">她由七个会互相改写的东西组成</p>
+        </div>
+      </section>
+
+      <!-- 01 一轮对话 -->
+      <section class="section shell reveal" id="pipeline">
+        <header class="section-head">
+          <p class="eyebrow">01 / One Turn</p>
+          <h2>一句话进来，十件事发生</h2>
+          <p>
+            顺序不是装饰。危机识别要在最前面，人格要在记忆前面，情绪要在写法前面——
+            换个顺序，她就会变成另一个人。点任意一格，看这一步具体在做什么。
+          </p>
+        </header>
+
+        <div class="pipeline-wrap">
+          <ol class="pipeline" id="pipeline-list"></ol>
+          <aside class="stage-detail" id="stage-detail" aria-live="polite"></aside>
+        </div>
+      </section>
+
+      <!-- 02 记忆 -->
+      <section class="section shell reveal" id="memory">
+        <header class="section-head">
+          <p class="eyebrow">02 / Memory</p>
+          <h2>记忆不是存下来，是<em>还会被想起来</em></h2>
+          <p>
+            每条记忆都有一个「稳定度」。越新越容易被想起，越常被说到越不容易掉下去。
+            但就算掉下去也不等于消失：她允许自己一条都想不起来，那才是真的像人。
+          </p>
+        </header>
+
+        <div class="memory-grid">
+          <div class="card curve-card">
+            <div class="curve-head">
+              <h3>这条记忆今天还剩多少</h3>
+              <div class="value" id="curve-value">—<small>%</small></div>
+            </div>
+            <canvas id="decay-canvas" aria-label="记忆保留率曲线"></canvas>
+            <div class="curve-controls">
+              <label>
+                <span>过了多久 <b><span id="age-label">30</span> 天</b></span>
+                <input id="age-range" type="range" min="0" max="180" step="1" value="30" />
+              </label>
+              <label>
+                <span>稳定度 <b><span id="stability-label">12</span></b></span>
+                <input id="stability-range" type="range" min="1" max="60" step="1" value="12" />
+              </label>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>一条记忆的一生</h3>
+            <ol class="lifecycle">
+              <li><span class="step-index">01</span><div><b>写进来</b><small>只写她亲耳听见的，带原话做证据</small></div></li>
+              <li><span class="step-index">02</span><div><b>被召回</b><small>和这句话有关，才浮上来；上限 6 条</small></div></li>
+              <li><span class="step-index">03</span><div><b>说出口</b><small>只有真的被说出来，才算又被加固一次</small></div></li>
+              <li><span class="step-index">04</span><div><b>合并</b><small>太像的两条并成一条，不堆同义句</small></div></li>
+              <li><span class="step-index">05</span><div><b>变淡</b><small>索引还在，但不再抢得上来说</small></div></li>
+              <li><span class="step-index">06</span><div><b>归档 / 遗忘</b><small>容量 500；先归档，再放手</small></div></li>
+            </ol>
+            <div class="formula">retention = (1 + age / stability)<sup>−0.6</sup>
+score = 相关度 × 保留率 × 重要性 × 心情偏置</div>
+          </div>
+        </div>
+
+        <div class="card recall-card">
+          <h3>试一句：这句话会让她想起什么？</h3>
+          <p class="hint">
+            这是真的召回，不是演示动画。它读你本地那份记忆，跑同一套打分，但不会写盘、也不会加固。
+          </p>
+          <form class="recall-form" id="recall-form">
+            <input id="recall-input" maxlength="200" placeholder="比如：明天十点面试，我有点紧张" autocomplete="off" />
+            <button type="submit">让她想想</button>
+          </form>
+          <div class="recall-meta" id="recall-meta"></div>
+          <div class="recall-list" id="recall-list">
+            <div class="empty-note">输入一句话，看看她现在会想起什么。</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 03 人格 -->
+      <section class="section shell reveal" id="persona">
+        <header class="section-head">
+          <p class="eyebrow">03 / Persona</p>
+          <h2>人格是<em>可以打开的文件</em>，不是一个黑盒</h2>
+          <p>
+            她是谁，写在 <code>personas/&lt;name&gt;/</code> 里。换一个目录就是换一个人，
+            不用重新训练，也不用改一行代码。每次开口前，这些文件会被拼成七块背景。
+          </p>
+        </header>
+
+        <div class="persona-grid">
+          <div class="card">
+            <h3>一个人格包的样子</h3>
+            <pre class="file-tree"><span class="c">personas/zhiyao-demo/</span>
+├── <span class="f">persona.json</span>   <span class="c">名字、角色、倾向、口吻、底线</span>
+├── <span class="f">identity.md</span>   <span class="c">她怎么看自己</span>
+├── <span class="f">voice.md</span>      <span class="c">她怎么说话（带例句）</span>
+├── <span class="f">tastes.md</span>     <span class="c">她喜欢什么、讨厌什么</span>
+├── <span class="f">life.md</span>       <span class="c">她一个人的时候在做什么</span>
+├── <span class="f">boundaries.md</span> <span class="c">什么不做，为什么</span>
+└── <span class="f">opening.md</span>    <span class="c">第一次开口的第一句</span></pre>
+            <p class="hint" style="margin-top: 14px">
+              演示人格 <code>zhiyao-demo</code>：温柔、母性、有点腹黑，白纸开局，没有预设的共同过去。
+            </p>
+          </div>
+
+          <div class="card">
+            <div class="curve-head">
+              <h3>这一轮她拿到的背景</h3>
+              <span class="hint" id="prompt-total">—</span>
+            </div>
+            <p class="hint" id="prompt-note">聊过一轮之后，这里会显示真实的 prompt 分块。</p>
+            <div class="prompt-blocks" id="prompt-blocks"></div>
+            <div class="trace-flow" id="prompt-flow"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 04 情绪与关系 -->
+      <section class="section shell reveal" id="emotion">
+        <header class="section-head">
+          <p class="eyebrow">04 / Emotion &amp; Bond</p>
+          <h2>情绪有三层，关系有<em>四个方向</em></h2>
+          <p>
+            背景情绪按几十小时退潮，当下情绪按几十分钟退潮，社交情绪按几小时退潮。
+            三层叠在一起，才是她「这会儿」的语气。关系不设总分，只记四个各自生长的方向。
+          </p>
+        </header>
+
+        <div class="emotion-grid">
+          <div class="card">
+            <div class="radar-wrap">
+              <canvas id="radar" aria-label="六维情绪雷达图"></canvas>
+            </div>
+            <div class="radar-legend">
+              <span><i style="background: #d8a86a"></i>背景</span>
+              <span><i style="background: #c98f82"></i>当下</span>
+              <span><i style="background: #8fa596"></i>社交</span>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3 id="emotion-title">此刻的她</h3>
+            <div class="layer-list" id="layer-list"></div>
+            <p class="bond-line" id="emotion-advice">—</p>
+
+            <div style="margin-top: 24px; padding-top: 18px; border-top: 1px solid var(--line-soft)">
+              <div class="bond-phase">
+                <b id="bond-phase">—</b>
+                <span id="bond-days">—</span>
+              </div>
+              <div class="bond-bars" id="bond-bars"></div>
+              <p class="bond-line" id="bond-line">—</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 05 档案 -->
+      <section class="section shell reveal" id="growth">
+        <header class="section-head">
+          <p class="eyebrow">05 / Growth</p>
+          <h2>她眼里的世界，是<em>聊出来的</em></h2>
+          <p>
+            六个格子，各有上限。写满不是目的——写满之后，新的一句话要挤掉旧的一条，
+            她必须决定什么更重要。这才是「成长」而不是「日志」。
+          </p>
+        </header>
+
+        <div class="card">
+          <div class="growth-grid" id="growth-grid"></div>
+          <div class="belief-list" id="belief-list"></div>
+        </div>
+      </section>
+
+      <!-- 06 透视 -->
+      <section class="section shell reveal" id="trace">
+        <header class="section-head">
+          <p class="eyebrow">06 / Trace</p>
+          <h2>每一句都留一份<em>现场</em></h2>
+          <p>
+            她为什么这么说，可以事后复盘：这一轮带了哪些背景、召回了哪几条、情绪从什么变成什么、
+            写进去了什么、哪个写法规则没守住、花了多久。只留最近 80 轮，旧的自动让位。
+          </p>
+        </header>
+
+        <div class="trace-grid">
+          <div class="card" id="trace-card">
+            <div class="empty-note">还没有透视。去聊一句，再回来。</div>
+          </div>
+          <div class="card">
+            <h3>这份现场里有什么</h3>
+            <p><b>prompt</b>：七块背景各自的字数，不是全文。</p>
+            <p><b>recall</b>：这一轮浮上来的记忆，以及它们各自的相关度、保留率、是否被加固。</p>
+            <p><b>emotion</b>：说话前的三层情绪，和说完之后的变化。</p>
+            <p><b>wrote</b>：这一轮写进了哪些记忆、档案、看法。</p>
+            <p><b>style</b>：有没有被她自己的口吻规则拦住。</p>
+            <p class="hint" style="margin-top: 16px">
+              这些记录只存在本机 <code>data/traces.jsonl</code>，不包含 API Key。
+            </p>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <div class="shell footer-inner">
+        <span>Project Serene · 白纸版知遥 · 一个不假装完美的人</span>
+        <div class="footer-links">
+          <a href="/">对话</a>
+          <a href="/brain">大脑</a>
+          <a href="/monitor">监测</a>
+          <a href="https://github.com/chisato-lycoreco/Project-Serene-Chatbot" target="_blank" rel="noreferrer">源码</a>
+        </div>
+      </div>
+    </footer>
+
+    <script type="module" src="/mechanisms.js"></script>
+  </body>
+</html>

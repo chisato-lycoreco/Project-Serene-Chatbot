@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>实时监测 · Project Serene</title>
+    <meta name="description" content="她此刻的情绪、关系、记忆、成长与每一轮对话的实时遥测。" />
+    <link rel="icon" href="/favicon.svg" />
+    <link rel="stylesheet" href="/pages.css" />
+    <link rel="stylesheet" href="/monitor.css" />
+  </head>
+  <body class="page monitor-page">
+    <header class="topbar">
+      <a class="brand" href="/">
+        <span class="brand-mark">知</span>
+        <span class="brand-text">
+          <b>Project Serene</b>
+          <small>白纸版知遥 · 实时监测</small>
+        </span>
+      </a>
+      <nav class="tabs" aria-label="页面">
+        <a href="/">对话</a>
+        <a href="/mechanisms">机制</a>
+        <a href="/brain">大脑</a>
+        <a href="/monitor" class="on">监测</a>
+      </nav>
+      <div class="topbar-right">
+        <span class="status-dot" id="conn-state">连接中</span>
+        <button class="badge gold mon-btn" id="pause" type="button">暂停刷新</button>
+      </div>
+    </header>
+
+    <main class="mon-shell">
+      <section class="mon-head">
+        <div>
+          <p class="eyebrow">Live Telemetry</p>
+          <h1><span id="persona-name">她</span>此刻</h1>
+          <p class="mon-sub" id="mon-sub">正在读取本机数据…</p>
+        </div>
+        <div class="mon-clock">
+          <b id="clock">--:--:--</b>
+          <span id="today">—</span>
+          <em id="updated">—</em>
+        </div>
+      </section>
+
+      <div class="mon-banner" id="demo-banner" hidden>
+        <div>
+          <b>面板还是空的。</b>
+          <span>聊一句，或者装一段演示数据，让这些数字先动起来。</span>
+        </div>
+        <button class="btn small primary" id="seed" type="button">装入演示数据</button>
+      </div>
+
+      <div class="mon-grid" id="mon-grid">
+        <article class="card mon-panel span-4">
+          <header class="mon-panel-head">
+            <h3>情绪地形</h3>
+            <span>三层叠加 · 0–100</span>
+          </header>
+          <div class="mon-radar">
+            <canvas id="radar" aria-label="六维情绪雷达图"></canvas>
+          </div>
+          <div class="radar-legend">
+            <span><i style="background: #d8a86a"></i>背景</span>
+            <span><i style="background: #c98f82"></i>当下</span>
+            <span><i style="background: #8fa596"></i>社交</span>
+          </div>
+        </article>
+
+        <article class="card mon-panel span-4">
+          <header class="mon-panel-head">
+            <h3>此刻的她</h3>
+            <span id="mood-value">心情 —</span>
+          </header>
+          <div class="tone-line" id="tone-line">—</div>
+          <div class="layer-stack" id="layer-stack"></div>
+          <div class="advice-line" id="advice-line">—</div>
+          <div class="cause-list" id="cause-list"></div>
+        </article>
+
+        <article class="card mon-panel span-4">
+          <header class="mon-panel-head">
+            <h3>这一台机器的体温</h3>
+            <span id="model-name">—</span>
+          </header>
+          <div class="vitals" id="vitals"></div>
+          <div class="spark-wrap">
+            <canvas id="latency-spark" aria-label="最近几轮延迟"></canvas>
+            <span class="spark-label">最近轮次延迟</span>
+          </div>
+        </article>
+
+        <article class="card mon-panel span-5">
+          <header class="mon-panel-head">
+            <h3>关系：四个方向</h3>
+            <span id="bond-days">—</span>
+          </header>
+          <div class="bond-top">
+            <b id="bond-phase">—</b>
+            <span id="bond-line">—</span>
+          </div>
+          <div class="bond-bars" id="bond-bars"></div>
+          <div class="bond-events" id="bond-events"></div>
+        </article>
+
+        <article class="card mon-panel span-4">
+          <header class="mon-panel-head">
+            <h3>记忆库</h3>
+            <span id="mem-cap">—</span>
+          </header>
+          <div class="mem-wrap">
+            <canvas id="mem-donut" aria-label="记忆类型分布"></canvas>
+            <div class="mem-kinds" id="mem-kinds"></div>
+          </div>
+          <div class="mem-stats" id="mem-stats"></div>
+        </article>
+
+        <article class="card mon-panel span-3">
+          <header class="mon-panel-head">
+            <h3>成长档案</h3>
+            <span id="growth-total">—</span>
+          </header>
+          <div class="growth-mini" id="growth-mini"></div>
+        </article>
+
+        <article class="card mon-panel span-8">
+          <header class="mon-panel-head">
+            <h3>最近几轮</h3>
+            <span>延迟 · 字数 · 背景</span>
+          </header>
+          <div class="turn-table" id="turn-table">
+            <div class="empty-note">还没有一轮完整的对话。</div>
+          </div>
+        </article>
+
+        <article class="card mon-panel span-4 feed-panel">
+          <header class="mon-panel-head">
+            <h3>事件河</h3>
+            <span>记忆 / 情绪 / 关系</span>
+          </header>
+          <div class="feed" id="feed">
+            <div class="empty-note">还没有事件。</div>
+          </div>
+        </article>
+
+        <article class="card mon-panel span-5">
+          <header class="mon-panel-head">
+            <h3>最近说的话</h3>
+            <span id="chat-count">—</span>
+          </header>
+          <div class="chat-mini" id="chat-mini"></div>
+        </article>
+
+        <article class="card mon-panel span-3">
+          <header class="mon-panel-head">
+            <h3>她相信的</h3>
+            <span id="belief-count">—</span>
+          </header>
+          <div class="belief-list" id="belief-list"></div>
+        </article>
+
+        <article class="card mon-panel span-4">
+          <header class="mon-panel-head">
+            <h3>背景构成</h3>
+            <span id="prompt-total">—</span>
+          </header>
+          <div class="prompt-blocks" id="prompt-blocks">
+            <div class="empty-note">聊过一轮之后，这里会显示真实的背景分块。</div>
+          </div>
+          <div class="prompt-foot" id="prompt-foot"></div>
+        </article>
+      </div>
+
+      <footer class="mon-foot">
+        <span>每 2.5 秒拉一次 <code>/api/live</code>，只读，不写任何东西。</span>
+        <span>
+          <a href="/mechanisms">看懂这些数字</a>
+          <a href="/brain">脑内图</a>
+        </span>
+      </footer>
+    </main>
+
+    <script type="module" src="/monitor.js"></script>
+  </body>
+</html>

@@ -73,6 +73,19 @@ async function api(request, response, url) {
     return sendJson(response, 200, runtime.state());
   }
 
+  if (method === "GET" && path === "/api/live") {
+    return sendJson(response, 200, runtime.live());
+  }
+
+  if (method === "POST" && path === "/api/recall-preview") {
+    const body = await readJson(request);
+    return sendJson(response, 200, runtime.previewRecall(body.query));
+  }
+
+  if (method === "POST" && path === "/api/demo/seed") {
+    return sendJson(response, 200, runtime.seedDemo());
+  }
+
   if (method === "GET" && path === "/api/timeline") {
     return sendJson(response, 200, runtime.timeline());
   }
@@ -165,7 +178,13 @@ async function staticFile(response, pathname) {
   const clean = decodeURIComponent(pathname);
   const target = resolve(join(PUBLIC, normalize(clean)));
   if (target !== PUBLIC && !target.startsWith(`${PUBLIC}${sep}`)) throw new HttpError(403, "不许出去。", "FORBIDDEN");
-  const file = existsSync(target) && statSync(target).isFile() ? target : join(PUBLIC, "index.html");
+  let file = existsSync(target) && statSync(target).isFile() ? target : null;
+  // 好看的地址：/brain → brain.html，/monitor → monitor.html，/mechanisms → mechanisms.html。
+  if (!file && !extname(clean)) {
+    const pretty = `${target}.html`;
+    if (existsSync(pretty) && statSync(pretty).isFile()) file = pretty;
+  }
+  if (!file) file = join(PUBLIC, "index.html");
   if (!existsSync(file)) throw new HttpError(404, "页面还没生成。", "NO_FILE");
   response.writeHead(200, {
     "content-type": MIME[extname(file)] ?? "application/octet-stream",
