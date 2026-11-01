@@ -275,6 +275,7 @@ chatOnce(text) {
 | 进程在写 JSONL 时被杀 | 最多丢最后一行 | 追加日志本身不会损坏前面的行 |
 | `data/` 被手改坏 | 启动时 JSON 解析失败 | 报错指向具体文件；备份后删掉该文件即可重建 |
 | 端口被占 | `EADDRINUSE` | 换 `SERENE_PORT` |
+| 长对话里回指对不上 | 窗口外的原文已滑出，召回也够不着 | 扩窗 / 滑出钉 / 整理读全，顺序见 [DRIFT.md](DRIFT.md) |
 
 ---
 
@@ -293,3 +294,4 @@ chatOnce(text) {
 - [README](../README.md)：它是什么、怎么跑
 - [docs/MEMORY.md](MEMORY.md)：记忆的公式、参数、写入与召回
 - [docs/PERSONA.md](PERSONA.md)：人格包怎么写、白纸原则、调参流程
+- [docs/DRIFT.md](DRIFT.md)：长对话失忆与人格漂移的实测、处方与禁忌
